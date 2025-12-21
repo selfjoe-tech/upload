@@ -1,0 +1,25 @@
+diff --git a/node_modules/@ffmpeg/ffmpeg/src/browser/defaultOptions.js b/node_modules/@ffmpeg/ffmpeg/src/browser/defaultOptions.js
+index ac32af3..e87f31c 100644
+--- a/node_modules/@ffmpeg/ffmpeg/src/browser/defaultOptions.js
++++ b/node_modules/@ffmpeg/ffmpeg/src/browser/defaultOptions.js
+@@ -3,8 +3,6 @@ import pkg from '../../package.json';
+ /*
+  * Default options for browser environment
+  */
+-const corePath = typeof process !== 'undefined' && process.env.NODE_ENV === 'development'
+-  ? new URL('/node_modules/@ffmpeg/core/dist/ffmpeg-core.js', import.meta.url).href
+-  : `https://unpkg.com/@ffmpeg/core@${pkg.devDependencies['@ffmpeg/core'].substring(1)}/dist/ffmpeg-core.js`;
++const corePath = `https://unpkg.com/@ffmpeg/core@${pkg.devDependencies['@ffmpeg/core'].substring(1)}/dist/ffmpeg-core.js`;
+ 
+ export default { corePath };
+diff --git a/node_modules/@ffmpeg/ffmpeg/src/browser/index.js b/node_modules/@ffmpeg/ffmpeg/src/browser/index.js
+index 19b7ff3..100e96f 100644
+--- a/node_modules/@ffmpeg/ffmpeg/src/browser/index.js
++++ b/node_modules/@ffmpeg/ffmpeg/src/browser/index.js
+@@ -1,5 +1,4 @@
+ import defaultOptions from './defaultOptions';
+ import { getCreateFFmpegCore } from './getCreateFFmpegCore';
+-import { fetchFile } from './fetchFile';
+ 
+-export { defaultOptions, getCreateFFmpegCore, fetchFile };
++export { defaultOptions, getCreateFFmpegCore};
