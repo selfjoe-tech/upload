@@ -24,8 +24,7 @@ export async function requireUserIdFromCookies(): Promise<string> {
 }
 
 
-
-export async function requireUserNameFromCookies(): Promise<string> {
+export async function requireUserNameFromCookies(): Promise<string | null> {
   const store = await cookies();
 
   const username = store.get("username")?.value ?? null;

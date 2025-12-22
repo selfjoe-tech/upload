@@ -2,6 +2,9 @@
 
 import { supabase } from "@/lib/supabaseClient";
 
+import require
+import { requireUserIdFromCookies } from "../server/requireUser";
+
 export type AudienceType =
   | "straight"
   | "gay"
@@ -54,10 +57,7 @@ function makeStoragePath(kind: "video" | "image", ownerId: string, file: File) {
   return `${folder}/${ownerId}/${random}.${ext}`;
 }
 
-async function requireUserId(): Promise<string> {
-  
-  return "f1f543a4-1280-447b-be7e-4d3e059c6c0b";
-}
+
 
 async function uploadToStorage(path: string, file: File): Promise<void> {
   const { error } = await supabase.storage.from("media").upload(path, file, {
@@ -119,7 +119,7 @@ export async function uploadTrimmedVideo(
   // We’ll do a simple 0 -> 100 callback so your UI doesn't break.
   opts?.onUploadProgress?.(0);
 
-  const ownerId = await requireUserId();
+  const ownerId = await requireUserIdFromCookies();
   const storagePath = makeStoragePath("video", ownerId, clip.file);
 
   // Upload bytes
