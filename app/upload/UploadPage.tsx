@@ -49,7 +49,7 @@ export default function UploadPage() {
   const MAX_VIDEO_SECONDS = 65;
   const router = useRouter();
   const sp = useSearchParams();
-  const redirect = sp.get("redirect") || "/home";
+  const redirect = sp.get("redirect") || "https://upskirtcandy.com/";
 
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -272,7 +272,7 @@ export default function UploadPage() {
           setPostFlow(null);
           setVideoFile(null);
           if (videoUrl) URL.revokeObjectURL(videoUrl);
-          router.push("/");
+          router.push("https://upskirtcandy.com/");
         } catch (err: any) {
           console.error(err);
           const msg = err?.message ?? "Upload failed, please try again.";
@@ -316,7 +316,7 @@ export default function UploadPage() {
 
             setPostFlow(null);
             setImageFiles([]);
-            router.push("/");
+            router.push("https://upskirtcandy.com/");
           } catch (err: any) {
             console.error(err);
             alert(err?.message ?? "Image upload failed, please try again.");
