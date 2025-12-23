@@ -56,7 +56,6 @@ export default function UploadPage() {
   const [processingError, setProcessingError] = useState<string | null>(null);
   const [wmUsername, setWmUsername] = useState<string>("");
   const [videoDurationSec, setVideoDurationSec] = useState<number | null>(null);
-  const username = requireUserNameFromCookies();
 
 
   useEffect(() => {
@@ -64,6 +63,7 @@ export default function UploadPage() {
     try {
       const prof = await getUserProfileFromCookies();
       if (prof.username) setWmUsername(prof.username);
+
     } catch (e) {
       console.error("failed to get username for watermark", e);
     }
@@ -207,6 +207,10 @@ export default function UploadPage() {
     <UploadFlow
       variant="video"
       clip={postFlow.clip}
+      processing={processing}
+      progress={progress}
+      processingError={processingError}
+      processingLabel="Processing video…"
       onCancel={() => setPostFlow(null)}
             onSubmit={async (formValues) => {
         setProcessing(true);
@@ -220,7 +224,7 @@ export default function UploadPage() {
           const originalDuration = videoDurationSec ?? 0;
 
 
-          const username = (wmUsername || "upskirtcandy").trim();
+          const username = wmUsername.trim();
 
           setProgress(5);
 
@@ -290,6 +294,10 @@ export default function UploadPage() {
         variant="images"
         images={postFlow.images}
         onCancel={() => setPostFlow(null)}
+        processing={processing}
+        progress={progress}
+        processingError={processingError}
+        processingLabel="Processing video…"
         onSubmit={async (formValues: any) => {
           try {
             const { successes, failures } = await uploadImagesBatch(
@@ -401,10 +409,19 @@ export default function UploadPage() {
 
           </p>
 
-      <p className="flex text-sm text-red-500 gap-2">
-        We recommended using <span className="text-pink-500 underline"><a href={"https://online-video-cutter.com/"}>123apps.com</a></span> for clipping videos,{" it's"} fast and free           
+      <p className="text-sm text-red-500 leading-snug">
+  We recommend using{" "}
+  <a
+    href="https://online-video-cutter.com/"
+    target="_blank"
+    rel="noopener noreferrer"
+    className="text-pink-500 underline underline-offset-2 whitespace-nowrap"
+  >
+    123apps.com
+  </a>{" "}
+  for clipping videos. It’s fast and free.
+</p>
 
-      </p>
 
           <input
             ref={videoInputRef}

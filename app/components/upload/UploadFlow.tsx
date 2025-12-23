@@ -40,10 +40,19 @@ export type UploadFlowSubmitPayload = {
   images?: ImageSelection;
 };
 
+// app/components/upload/UploadFlow.tsx
+
 type BaseHandlers = {
   onCancel: () => void;
   onSubmit: (payload: UploadFlowSubmitPayload) => Promise<void>;
+
+  // ✅ NEW: progress UI inputs (from parent)
+  processing?: boolean;              // true while watermarking/uploading
+  progress?: number;                 // 0..100
+  processingError?: string | null;   // show any error
+  processingLabel?: string;          // optional label
 };
+
 
 type Props =
   | ({ variant: "video"; clip: ClipSelection } & BaseHandlers)
@@ -74,6 +83,41 @@ function toTitleCase(str: string): string {
     .join(" ");
 }
 
+function ProcessingBar({
+  label = "Processing…",
+  progress = 0,
+  error,
+}: {
+  label?: string;
+  progress?: number;
+  error?: string | null;
+}) {
+  const pct = Math.max(0, Math.min(100, Math.round(progress)));
+
+  return (
+    <div className="rounded-2xl border border-white/15 bg-black/50 p-4 space-y-2">
+      <div className="flex justify-between text-xs text-white/80">
+        <span>{label}</span>
+        <span>{pct}%</span>
+      </div>
+
+      <div className="h-1.5 w-full rounded-full bg-white/10 overflow-hidden">
+        <div
+          className="h-full rounded-full"
+          style={{
+            width: `${pct}%`,
+            background:
+              "linear-gradient(90deg, rgb(236,72,153), rgb(251,191,36))",
+          }}
+        />
+      </div>
+
+      {error && <p className="text-xs text-red-400">{error}</p>}
+    </div>
+  );
+}
+
+
 function Stepper({ step, total = 3 }: { step: number; total?: number }) {
   const pct = (step - 1) / (total - 1);
   return (
@@ -103,6 +147,8 @@ export default function UploadFlow(props: Props) {
   const [description, setDescription] = React.useState("");
   const [loading, setLoading] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  const busy = loading || !!props.processing;
+
 
 
 
@@ -244,15 +290,19 @@ export default function UploadFlow(props: Props) {
         <div className="flex items-center gap-2 p-4 border-b border-white/10">
           <button
             onClick={() =>
-              step === 1
+              busy
+                ? null
+                : step === 1
                 ? props.onCancel()
                 : setStep((s) => (s > 1 ? ((s - 1) as 1 | 2 | 3) : s))
             }
-            className="rounded-full p-2 hover:bg-white/10"
+            disabled={busy}
+            className={`rounded-full p-2 hover:bg-white/10 ${busy ? "opacity-40 cursor-not-allowed" : ""}`}
             aria-label="Back"
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
+
           <p className="font-semibold text-lg">{titleForStep}</p>
         </div>
 
@@ -416,44 +466,57 @@ export default function UploadFlow(props: Props) {
           )}
 
           {/* STEP 3 – description */}
-          {step === 3 && (
-            <div className="space-y-5">
-              <p className="text-sm text-white/80">
-                <span className="font-semibold">
-                  Posts with clear descriptions with your username included tend to perform better.
-                </span>
-              </p>
+         {/* STEP 3 – description */}
+{step === 3 && (
+  <div className="space-y-5">
+    <p className="text-sm text-white/80">
+      <span className="font-semibold">
+        Posts with clear descriptions (optional) with your username tend to perform better.
+      </span>
+    </p>
 
-              <Textarea
-                rows={6}
-                value={description}
-                onChange={(e) => setDescription(e.target.value)}
-                placeholder="Write a short description…"
-                className="bg-black/40 border-white/20"
-              />
+    <Textarea
+      rows={6}
+      value={description}
+      onChange={(e) => setDescription(e.target.value)}
+      placeholder="Write a short description…"
+      className="bg-black/40 border-white/20"
+      disabled={busy}
+    />
 
-              {submitError && (
-                <p className="text-xs text-red-400">{submitError}</p>
-              )}
+    {/* ✅ NEW: show real progress here */}
+    {props.processing && (
+      <ProcessingBar
+        label={props.processingLabel ?? "Processing video…"}
+        progress={props.progress ?? 0}
+        error={props.processingError ?? null}
+      />
+    )}
 
-              <div className="flex justify-between pt-2">
-                <Button
-                  variant="ghost"
-                  onClick={() => setStep(2)}
-                  className="rounded-full"
-                >
-                  Back
-                </Button>
-                <Button
-                  onClick={submit}
-                  className="w-30 sm:w-56 h-11 rounded-full text-black font-semibold"
-                  style={{ backgroundColor: ACCENT }}
-                >
-                  {loading ? <Loader /> : "Submit"}
-                </Button>
-              </div>
-            </div>
-          )}
+    {submitError && <p className="text-xs text-red-400">{submitError}</p>}
+
+    <div className="flex justify-between pt-2">
+      <Button
+        variant="ghost"
+        onClick={() => setStep(2)}
+        className="rounded-full"
+        disabled={busy}
+      >
+        Back
+      </Button>
+
+      <Button
+        onClick={submit}
+        className="w-30 sm:w-56 h-11 rounded-full text-black font-semibold"
+        style={{ backgroundColor: ACCENT }}
+        disabled={busy}
+      >
+        {busy ? <Loader className="animate-spin" /> : "Submit"}
+      </Button>
+    </div>
+  </div>
+)}
+
         </div>
       </div>
     </div>

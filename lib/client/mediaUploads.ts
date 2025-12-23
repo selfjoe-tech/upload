@@ -154,7 +154,7 @@ export async function uploadSingleImage(
 ): Promise<InsertedMediaRow> {
   opts?.onUploadProgress?.(0);
 
-  const ownerId = await requireUserId();
+  const ownerId = await requireUserIdFromCookies();
   const storagePath = makeStoragePath("image", ownerId, file);
 
   await uploadToStorage(storagePath, file);
@@ -185,7 +185,7 @@ export async function uploadImagesBatch(
   const failures: { index: number; error: string }[] = [];
 
   // Reuse the same user id for the whole batch
-  const ownerId = await requireUserId();
+  const ownerId = await requireUserIdFromCookies();
 
   for (let i = 0; i < files.length; i++) {
     try {
