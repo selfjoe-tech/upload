@@ -62,7 +62,7 @@ export default function UploadPage() {
     try {
       const prof = await getUserProfileFromCookies();
       if (prof.username) setWmUsername(prof.username);
-      console.log(prof, "<<<<<<<<<<,")
+      console.log(prof, "<<<<<<<<<< new")
 
     } catch (e) {
       console.error("failed to get username for watermark", e);

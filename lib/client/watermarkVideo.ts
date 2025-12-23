@@ -5,6 +5,18 @@ import type { FFmpeg } from "@ffmpeg/ffmpeg";
 import { createFFmpeg } from "@ffmpeg/ffmpeg";
 import { fetchFile } from "@ffmpeg/util";
 
+const WM_BYTES_CACHE = new Map<string, Uint8Array>();
+
+async function getWatermarkBytes(username: string, logoUrl: string) {
+  const key = `${logoUrl}::${username.trim().toLowerCase()}`;
+  const hit = WM_BYTES_CACHE.get(key);
+  if (hit) return hit;
+
+  const bytes = await createWatermarkPngBytes(username.trim(), logoUrl);
+  WM_BYTES_CACHE.set(key, bytes);
+  return bytes;
+}
+
 export type WatermarkPosition =
   | "top-left"
   | "top-right"
@@ -25,7 +37,7 @@ async function getFfmpeg(onProgress?: (ratio: number) => void): Promise<FFmpeg> 
   }
 
   if (!ffmpegLoading) {
-    const ff = createFFmpeg({ log: true });
+    const ff = createFFmpeg({ log: false });
 
     ffmpegLoading = (async () => {
       if (!ff.isLoaded()) await ff.load();
@@ -138,7 +150,7 @@ export async function watermarkVideoFile(
   });
 
   (ffmpeg as any).FS("writeFile", "input.mp4", await fetchFile(file));
-  (ffmpeg as any).FS("writeFile", "wm.png", await createWatermarkPngBytes(username.trim(), logoUrl));
+  (ffmpeg as any).FS("writeFile", "wm.png", await getWatermarkBytes(username, logoUrl));
 
   const overlay = getOverlayFilter(position);
 
@@ -158,10 +170,23 @@ export async function watermarkVideoFile(
 
   const data = (ffmpeg as any).FS("readFile", "output.mp4") as Uint8Array;
 
+  try { (ffmpeg as any).FS("unlink", "input.mp4"); } catch {}
+  try { (ffmpeg as any).FS("unlink", "wm.png"); } catch {}
+  try { (ffmpeg as any).FS("unlink", "output.mp4"); } catch {}
+
+
   const outName =
     file.name.replace(/\.[^.]+$/, "") + "-wm" + (file.name.match(/\.[^.]+$/) ?? [".mp4"])[0];
 
-  return new File([data.buffer], outName, { type: "video/mp4" });
+const bytes = data.byteOffset === 0 && data.byteLength === data.buffer.byteLength
+  ? data.buffer
+  : data.buffer.slice(data.byteOffset, data.byteOffset + data.byteLength);
+
+return new File([bytes], outName, { type: "video/mp4" });
+
+
+
+
 }
 
 
