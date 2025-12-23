@@ -29,7 +29,6 @@ import {
 
 import { getUserProfileFromCookies } from "@/lib/actions/auth";
 import OverlayPortal from "@/app/components/ui/OverlayPortal";
-import { requireUserNameFromCookies } from "@/lib/server/requireUser";
 
 
 const ACCENT = "pink";
@@ -63,6 +62,7 @@ export default function UploadPage() {
     try {
       const prof = await getUserProfileFromCookies();
       if (prof.username) setWmUsername(prof.username);
+      console.log(prof, "<<<<<<<<<<,")
 
     } catch (e) {
       console.error("failed to get username for watermark", e);

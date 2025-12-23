@@ -145,7 +145,7 @@ export async function watermarkVideoFile(
   await (ffmpeg as any).run(
     "-i", "input.mp4",
     "-i", "wm.png",
-    "-filter_complex", `[0:v]scale=-2:480,fps=30[v0];[v0][1:v]${overlay}[vout]`,
+    "-filter_complex", `[0:v]scale=-2:720,fps=30[v0];[v0][1:v]${overlay}[vout]`,
     "-map", "[vout]",
     "-map", "0:a?",
     "-c:v", "libx264",
@@ -163,3 +163,5 @@ export async function watermarkVideoFile(
 
   return new File([data.buffer], outName, { type: "video/mp4" });
 }
+
+

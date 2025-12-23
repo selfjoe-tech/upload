@@ -27,22 +27,3 @@ export async function getUserProfileFromCookies(): Promise<{
 
   return { username, avatarUrl, isLoggedIn };
 }
-
-export async function getUserProfile(): Promise<{
-  username: string | null;
-  avatarUrl: string | null;
-  isLoggedIn: string | null;
-}> {
-  
-
-  let avatarUrl: string | null = null;
-
-  if (avatarPath) {
-    const { data } = supabase.storage
-      .from("media")
-      .getPublicUrl(avatarPath);
-    avatarUrl = data.publicUrl || null;
-  }
-
-  return { username, avatarUrl, isLoggedIn };
-}
