@@ -2,7 +2,6 @@
 
 import { supabase } from "@/lib/supabaseClient";
 
-import require
 import { requireUserIdFromCookies } from "../server/requireUser";
 
 export type AudienceType =

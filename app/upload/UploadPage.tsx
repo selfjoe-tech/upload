@@ -25,7 +25,6 @@ import {
 import Link from "next/link";
 import {
   watermarkVideoFile,
-  trimAndWatermarkVideoFile,
 } from "@/lib/client/watermarkVideo";
 
 import { getUserProfileFromCookies } from "@/lib/actions/auth";
@@ -220,34 +219,25 @@ export default function UploadPage() {
           const selectionDuration = Math.max(0, originalClip.end - originalClip.start);
           const originalDuration = videoDurationSec ?? 0;
 
-          const EPS = 0.30;
-          const needsTrim = originalDuration > 60 + EPS;
 
           const username = (wmUsername || "upskirtcandy").trim();
 
           setProgress(5);
 
-          let processedFile: File;
+          
           let durationSecondsToStore: number;
 
-          if (needsTrim) {
             // Trim + watermark in one pass
-            processedFile = await trimAndWatermarkVideoFile(
-              originalClip.file,
-              username,
-              { startSec: originalClip.start, endSec: originalClip.end },
-              {
-                onProgress: (ratio) => setProgress(5 + Math.round(ratio * 70)), // 5..75
-              }
-            );
+            
             durationSecondsToStore = selectionDuration;
-          } else {
+          
             // No trimming: ignore the trim selection and watermark the whole clip
-            processedFile = await watermarkVideoFile(originalClip.file, username, {
+            const processedFile: File = await watermarkVideoFile(originalClip.file, username, {
               onProgress: (ratio) => setProgress(5 + Math.round(ratio * 70)), // 5..75
             });
+
             durationSecondsToStore = originalDuration;
-          }
+          
 
           setProgress(78);
 

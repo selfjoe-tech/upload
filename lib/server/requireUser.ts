@@ -1,3 +1,5 @@
+"use server";
+
 import { cookies } from "next/headers";
 import { supabasePublic as supabase } from "@/lib/supabase/public";
 
