@@ -132,6 +132,64 @@ function getOverlayFilter(pos: WatermarkPosition) {
   }
 }
 
+function buildCyclingOverlayExpr(opts: {
+  positions?: WatermarkPosition[];
+  slotSeconds?: number;   // 5
+  onSeconds?: number;     // 2 (visible)
+  margin?: number;        // 16
+  phaseOffsetSeconds?: number; // optional random offset per upload
+}) {
+  const positions = opts.positions ?? [
+    "top-left",
+    "top-right",
+    "bottom-left",
+    "bottom-right",
+  ];
+
+  const slot = opts.slotSeconds ?? 5;
+  const on = opts.onSeconds ?? 2;
+  const m = opts.margin ?? 16;
+  const cycle = positions.length * slot;
+
+  const phase = opts.phaseOffsetSeconds ?? 0;
+  const mt = `mod(t+${phase.toFixed(3)},${cycle})`;
+
+  // enable is "1" only during the ON windows (2 seconds) inside each 5s slot
+  const enable = positions
+    .map((_, i) => {
+      const start = i * slot;
+      const end = i * slot + on;
+      return `between(${mt},${start},${end})`;
+    })
+    .join("+");
+
+  // pick x/y based on which ON window we're in
+  const cond = (i: number) => `between(${mt},${i * slot},${i * slot + on})`;
+
+  const xFor = (pos: WatermarkPosition) =>
+    pos === "top-right" || pos === "bottom-right" ? `W-w-${m}` : `${m}`;
+
+  const yFor = (pos: WatermarkPosition) =>
+    pos === "bottom-left" || pos === "bottom-right" ? `H-h-${m}` : `${m}`;
+
+  // nested ifs: if window0 -> pos0 else if window1 -> pos1 ...
+  let xExpr = xFor(positions[0]);
+  let yExpr = yFor(positions[0]);
+
+  for (let i = positions.length - 1; i >= 0; i--) {
+    xExpr = `if(${cond(i)},${xFor(positions[i])},${xExpr})`;
+    yExpr = `if(${cond(i)},${yFor(positions[i])},${yExpr})`;
+  }
+
+  return {
+    cycleSeconds: cycle,
+    enableExpr: enable,
+    xExpr,
+    yExpr,
+  };
+}
+
+
 export async function watermarkVideoFile(
   file: File,
   username: string,
@@ -152,12 +210,26 @@ export async function watermarkVideoFile(
   (ffmpeg as any).FS("writeFile", "input.mp4", await fetchFile(file));
   (ffmpeg as any).FS("writeFile", "wm.png", await getWatermarkBytes(username, logoUrl));
 
-  const overlay = getOverlayFilter(position);
+
+    // If you want it to move + disappear:
+  const cycle = buildCyclingOverlayExpr({
+    slotSeconds: 5,   // every 5 seconds we move to next corner
+    onSeconds: 4,     // visible for 4 seconds
+    margin: 16,
+    // optional: make each upload start at a different point in the cycle
+    phaseOffsetSeconds: Math.random() * 20,
+  });
 
   await (ffmpeg as any).run(
     "-i", "input.mp4",
     "-i", "wm.png",
-    "-filter_complex", `[0:v]scale=-2:720,fps=20[v0];[v0][1:v]${overlay}[vout]`,
+    "-filter_complex",
+    `[0:v]scale=-2:720,fps=20[v0];` +
+      `[v0][1:v]overlay=` +
+      `x='${cycle.xExpr}':` +
+      `y='${cycle.yExpr}':` +
+      `enable='${cycle.enableExpr}'` +
+      `[vout]`,
     "-map", "[vout]",
     "-map", "0:a?",
     "-c:v", "libx264",
@@ -167,6 +239,7 @@ export async function watermarkVideoFile(
     "-b:a", "128k",
     "output.mp4"
   );
+
 
   const data = (ffmpeg as any).FS("readFile", "output.mp4") as Uint8Array;
 

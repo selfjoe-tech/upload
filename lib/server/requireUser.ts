@@ -25,12 +25,3 @@ export async function requireUserIdFromCookies(): Promise<string> {
   return userId;
 }
 
-
-export async function requireUserNameFromCookies(): Promise<string | null> {
-  const store = await cookies();
-
-  const username = store.get("username")?.value ?? null;
-  // Optional sanity check: confirm profile exists
-  
-  return username;
-}
