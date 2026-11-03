@@ -133,89 +133,82 @@ export default function UploadPage() {
     }
   };
 
-  async function handlePickVideo(
-    e: React.ChangeEvent<HTMLInputElement>
-  ) {
-    const f = e.target.files?.[0] ?? null;
+ async function handlePickVideo(
+  e: React.ChangeEvent<HTMLInputElement>
+) {
+  const f = e.target.files?.[0] ?? null;
 
-    e.currentTarget.value = "";
+  e.currentTarget.value = "";
 
-    if (!f) return;
+  if (!f) return;
 
-    setPrepError(null);
+  // Reset any previous upload flow or media selection.
+  setPostFlow(null);
+  setImageFiles([]);
+  setBulkFiles([]);
+  setVideoFile(null);
+  setVideoUrl(null);
+  setPrepError(null);
 
-    /*
-     * =========================================================
-     * HARD VIDEO SIZE LIMIT
-     * =========================================================
-     *
-     * Maximum allowed:
-     *
-     * 50 MiB = 50 * 1024 * 1024 bytes
-     *
-     * Anything larger is rejected immediately.
-     *
-     * Video duration is NOT checked.
-     * =========================================================
-     */
+  if (f.size > MAX_VIDEO_SIZE_BYTES) {
+    setPrepError(
+      `Videos larger than ${MAX_VIDEO_SIZE_MB} MB aren't allowed. Please choose a video that is ${MAX_VIDEO_SIZE_MB} MB or smaller.`
+    );
 
-    if (f.size > MAX_VIDEO_SIZE_BYTES) {
-      setVideoFile(null);
-      setVideoUrl(null);
-
-      setPrepError(
-        `Videos larger than ${MAX_VIDEO_SIZE_MB} MB aren't allowed. Please choose a video that is ${MAX_VIDEO_SIZE_MB} MB or smaller.`
-      );
-
-      return;
-    }
-
-    setIsPreparing(true);
-    setPrepTarget("video");
-
-    let url: string | null = null;
-
-    try {
-      url = URL.createObjectURL(f);
-
-      await ensureVideoUsable(url, {
-        timeoutMs: 10000,
-      });
-
-      setVideoFile(f);
-      setVideoUrl(url);
-    } catch (err) {
-      console.error(err);
-
-      if (url) {
-        URL.revokeObjectURL(url);
-      }
-
-      setVideoFile(null);
-      setVideoUrl(null);
-
-      setPrepError(
-        "We couldn't load this video. Try another file (H.264/AAC MP4 is safest)."
-      );
-    } finally {
-      setIsPreparing(false);
-      setPrepTarget(null);
-    }
+    return;
   }
 
-  function handlePickImages(
-    e: React.ChangeEvent<HTMLInputElement>
-  ) {
-    const picked = Array.from(e.target.files ?? []);
+  setIsPreparing(true);
+  setPrepTarget("video");
 
-    e.currentTarget.value = "";
+  let url: string | null = null;
 
-    if (picked.length === 0) return;
+  try {
+    url = URL.createObjectURL(f);
 
-    setPrepError(null);
-    setImageFiles(picked);
+    await ensureVideoUsable(url, {
+      timeoutMs: 10000,
+    });
+
+    setVideoFile(f);
+    setVideoUrl(url);
+  } catch (err) {
+    console.error(err);
+
+    if (url) {
+      URL.revokeObjectURL(url);
+    }
+
+    setVideoFile(null);
+    setVideoUrl(null);
+
+    setPrepError(
+      "We couldn't load this video. Try another file (H.264/AAC MP4 is safest)."
+    );
+  } finally {
+    setIsPreparing(false);
+    setPrepTarget(null);
   }
+}
 
+ function handlePickImages(
+  e: React.ChangeEvent<HTMLInputElement>
+) {
+  const picked = Array.from(e.target.files ?? []);
+
+  e.currentTarget.value = "";
+
+  if (picked.length === 0) return;
+
+  // Reset any previous upload flow or media selection.
+  setPostFlow(null);
+  setVideoFile(null);
+  setVideoUrl(null);
+  setBulkFiles([]);
+  setPrepError(null);
+
+  setImageFiles(picked);
+}
   // ============================================================
   // 1) VIDEO PREVIEW
   // ============================================================
@@ -279,137 +272,123 @@ export default function UploadPage() {
   // 3) UPLOAD FLOW — VIDEO
   // ============================================================
 
-  // if (postFlow?.kind === "video") {
-  //   return (
-  //     <UploadFlow
-  //       variant="video"
-  //       clip={postFlow.clip}
-  //       processing={processing}
-  //       progress={progress}
-  //       processingError={processingError}
-  //       processingLabel="Processing video…"
-  //       onCancel={() => setPostFlow(null)}
-  //       onSubmit={async (formValues) => {
-  //         setProcessing(true);
-  //         setProcessingError(null);
-  //         setProgress(0);
+  if (postFlow?.kind === "video") {
+    return (
+      <UploadFlow
+        variant="video"
+        clip={postFlow.clip}
+        processing={processing}
+        progress={progress}
+        processingError={processingError}
+        processingLabel="Processing video…"
+        onCancel={() => setPostFlow(null)}
+        onSubmit={async (formValues) => {
+          setProcessing(true);
+          setProcessingError(null);
+          setProgress(0);
 
-  //         try {
-  //           const originalClip =
-  //             postFlow.clip;
+          try {
+            const originalClip =
+              postFlow.clip;
 
-  //           /*
-  //            * The video is no longer trimmed.
-  //            *
-  //            * The full original video is watermarked
-  //            * and uploaded as-is.
-  //            */
+            /*
+             * The video is no longer trimmed.
+             *
+             * The full original video is watermarked
+             * and uploaded as-is.
+             */
 
-  //           const username =
-  //             wmUsername.trim();
+            
 
-  //           setProgress(5);
+            setProgress(5);
 
-  //           const processedFile: File =
-  //             await watermarkVideoFile(
-  //               originalClip.file,
-  //               username,
-  //               {
-  //                 onProgress: (ratio) =>
-  //                   setProgress(
-  //                     5 +
-  //                       Math.round(
-  //                         ratio * 70
-  //                       )
-  //                   ),
-  //               }
-  //             );
+            const processedFile: File = originalClip.file
 
-  //           setProgress(78);
+            setProgress(78);
 
-  //           /*
-  //            * Because the video is no longer trimmed,
-  //            * start/end represent the full original
-  //            * video for compatibility with the
-  //            * existing ClipSelection type.
-  //            */
-  //           const finalClip: ClipSelection = {
-  //             ...originalClip,
-  //             file: processedFile,
-  //           };
+            /*
+             * Because the video is no longer trimmed,
+             * start/end represent the full original
+             * video for compatibility with the
+             * existing ClipSelection type.
+             */
+            const finalClip: ClipSelection = {
+              ...originalClip,
+              file: processedFile,
+            };
 
-  //           const row =
-  //             await uploadTrimmedVideo(
-  //               finalClip,
-  //               {
-  //                 title:
-  //                   formValues.description?.slice(
-  //                     0,
-  //                     80
-  //                   ) ?? "",
+            const row =
+              await uploadTrimmedVideo(
+                finalClip,
+                {
+                  title:
+                    formValues.description?.slice(
+                      0,
+                      80
+                    ) ?? "",
 
-  //                 description:
-  //                   formValues.description ?? "",
+                  description:
+                    formValues.description ?? "",
 
-  //                 audience:
-  //                   formValues.audience,
+                  audience:
+                    formValues.audience,
 
-  //                 tags:
-  //                   formValues.tags ?? [],
-  //               },
-  //               {
-  //                 /*
-  //                  * uploadTrimmedVideo can use the actual
-  //                  * video duration when processing/uploading.
-  //                  * No selection duration is used here.
-  //                  */
-  //                 onUploadProgress: (pct) =>
-  //                   setProgress(
-  //                     78 +
-  //                       Math.round(
-  //                         (pct / 100) *
-  //                           20
-  //                       )
-  //                   ),
-  //               }
-  //             );
+                  tags:
+                    formValues.tags ?? [],
+                },
+                {
+                  /*
+                   * uploadTrimmedVideo can use the actual
+                   * video duration when processing/uploading.
+                   * No selection duration is used here.
+                   */
+                  onUploadProgress: (pct) =>
+                    setProgress(
+                      78 +
+                        Math.round(
+                          (pct / 100) *
+                            20
+                        )
+                    ),
+                }
+              );
 
-  //           console.log(
-  //             "Inserted media row:",
-  //             row
-  //           );
+            console.log(
+              "Inserted media row:",
+              row
+            );
 
-  //           setProgress(100);
+            setProgress(100);
 
-  //           setPostFlow(null);
-  //           setVideoFile(null);
+            setPostFlow(null);
+            setVideoFile(null);
 
-  //           if (videoUrl) {
-  //             URL.revokeObjectURL(videoUrl);
-  //           }
+            if (videoUrl) {
+              URL.revokeObjectURL(videoUrl);
+            }
 
-  //           setVideoUrl(null);
+            setVideoUrl(null);
 
-  //           router.push(
-  //             "https://upskirtcandy.com/"
-  //           );
-  //         } catch (err: any) {
-  //           console.error(err);
+            router.push(
+              "https://upskirtcandy.com/"
+            );
+          } catch (err: any) {
+            console.error(err);
 
-  //           const msg =
-  //             err?.message ??
-  //             "Upload failed, please try again.";
+            const msg =
+              err?.message ??
+              "Upload failed, please try again.";
 
-  //           setProcessingError(msg);
+            setProcessingError(msg);
 
-  //           throw new Error(msg);
-  //         } finally {
-  //           setProcessing(false);
-  //         }
-  //       }}
-  //     />
-  //   );
-  // }
+            throw new Error(msg);
+          } finally {
+            setProcessing(false);
+          }
+        }}
+      />
+    );
+  }
 
   // ============================================================
   // 3B) UPLOAD FLOW — IMAGES
@@ -628,6 +607,7 @@ export default function UploadPage() {
             ref={imageInputRef}
             type="file"
             accept="image/*"
+            multiple
             className="hidden"
             onChange={handlePickImages}
           />
