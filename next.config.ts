@@ -1,5 +1,13 @@
 import type { NextConfig } from "next";
 
+const currentSupabaseHostname = (() => {
+  try {
+    return new URL(process.env.NEXT_PUBLIC_SUPABASE_URL || "https://tkplsmxyouexyirhkqlf.supabase.co").hostname;
+  } catch {
+    return "tkplsmxyouexyirhkqlf.supabase.co";
+  }
+})();
+
 const nextConfig: NextConfig = {
   serverExternalPackages: [
     "ffmpeg-static",
@@ -26,12 +34,12 @@ const nextConfig: NextConfig = {
     remotePatterns: [
       {
         protocol: "https",
-        hostname: "dzgpkywovaezlaabuxhl.supabase.co",
+        hostname: currentSupabaseHostname,
         pathname: "/storage/v1/object/public/**",
       },
       {
         protocol: "https",
-        hostname: "dzgpkywovaezlaabuxhl.supabase.co",
+        hostname: currentSupabaseHostname,
         pathname: "/storage/v1/object/sign/**",
       },
     ],
