@@ -1,29 +1,30 @@
 "use server";
 
-import { cookies } from "next/headers";
-import { supabase } from "../supabaseClient";
-
+import { createClient } from "@/lib/supabase/server";
 
 export async function getUserProfileFromCookies(): Promise<{
   username: string | null;
   avatarUrl: string | null;
   isLoggedIn: string | null;
 }> {
-  const store = await cookies();
-
-  const username = store.get("username")?.value ?? null;
-  const avatarPath = store.get("avatar")?.value ?? null;
-  const isLoggedIn = store.get("isLoggedIn")?.value ?? null;
-
-
-  let avatarUrl: string | null = null;
-
-  if (avatarPath) {
-    const { data } = supabase.storage
-      .from("media")
-      .getPublicUrl(avatarPath);
-    avatarUrl = data.publicUrl || null;
+  try {
+    const supabase = await createClient();
+    const { data: auth, error } = await supabase.auth.getUser();
+    if (error || !auth.user) {
+      return { username: null, avatarUrl: null, isLoggedIn: null };
+    }
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("username, avatar_url")
+      .eq("id", auth.user.id)
+      .maybeSingle();
+    return {
+      username: profile?.username ?? null,
+      avatarUrl: profile?.avatar_url ?? null,
+      isLoggedIn: "true",
+    };
+  } catch (error) {
+    console.warn("[upload] Could not load current profile", error);
+    return { username: null, avatarUrl: null, isLoggedIn: null };
   }
-
-  return { username, avatarUrl, isLoggedIn };
 }

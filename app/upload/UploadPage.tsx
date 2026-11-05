@@ -2,7 +2,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -24,7 +24,6 @@ import {
   uploadImagesBatch,
 } from "@/lib/client/mediaUploads";
 
-import Link from "next/link";
 
 // import {
 //   watermarkVideoFile,
@@ -35,6 +34,21 @@ import OverlayPortal from "@/app/components/ui/OverlayPortal";
 
 const ACCENT = "pink";
 
+const GOONGRAM_HOME = "https://goongram.com/";
+
+function safeReturnUrl(raw: string | null): string {
+  if (!raw) return GOONGRAM_HOME;
+  try {
+    const url = new URL(raw, GOONGRAM_HOME);
+    if (url.protocol !== "https:" || !["goongram.com", "www.goongram.com"].includes(url.hostname)) {
+      return GOONGRAM_HOME;
+    }
+    return url.href;
+  } catch {
+    return GOONGRAM_HOME;
+  }
+}
+
 const MAX_VIDEO_SIZE_BYTES = 50 * 1024 * 1024;
 const MAX_VIDEO_SIZE_MB = 50;
 
@@ -44,11 +58,9 @@ type PostFlow =
   | null;
 
 export default function UploadPage() {
-  const router = useRouter();
   const sp = useSearchParams();
 
-  const redirect =
-    sp.get("redirect") || "https://upskirtcandy.com/";
+  const redirect = safeReturnUrl(sp.get("redirect"));
 
   const [processing, setProcessing] = useState(false);
   const [progress, setProgress] = useState(0);
@@ -66,7 +78,7 @@ export default function UploadPage() {
           setWmUsername(prof.username);
         }
 
-        console.log(prof, "<<<<<<<<<< new");
+        
       } catch (e) {
         console.error(
           "failed to get username for watermark",
@@ -122,16 +134,7 @@ export default function UploadPage() {
     };
   }, [videoUrl]);
 
-  const onClose = () => {
-    if (
-      typeof window !== "undefined" &&
-      window.history.length > 1
-    ) {
-      router.back();
-    } else {
-      router.replace(redirect);
-    }
-  };
+  const onClose = () => window.location.assign(redirect);
 
  async function handlePickVideo(
   e: React.ChangeEvent<HTMLInputElement>
@@ -353,10 +356,6 @@ export default function UploadPage() {
                 }
               );
 
-            console.log(
-              "Inserted media row:",
-              row
-            );
 
             setProgress(100);
 
@@ -369,9 +368,7 @@ export default function UploadPage() {
 
             setVideoUrl(null);
 
-            router.push(
-              "https://upskirtcandy.com/"
-            );
+            window.location.assign(redirect);
           } catch (err: any) {
             console.error(err);
 
@@ -403,7 +400,7 @@ export default function UploadPage() {
         processing={processing}
         progress={progress}
         processingError={processingError}
-        processingLabel="Processing video…"
+        processingLabel="Uploading images…"
         onSubmit={async (formValues: any) => {
           try {
             const {
@@ -418,27 +415,20 @@ export default function UploadPage() {
                     formValues.description,
                   audience:
                     formValues.audience,
+                  tags: formValues.tags ?? [],
                 }
               );
 
-            console.log(
-              "Image upload successes:",
-              successes
-            );
 
             if (failures.length > 0) {
-              console.warn(
-                "Some images failed to upload:",
-                failures
-              );
+              console.warn("Some images failed to upload:", failures);
+              throw new Error(`${failures.length} of ${postFlow.images.files.length} images failed to upload. Try uploading the failed images again.`);
             }
 
             setPostFlow(null);
             setImageFiles([]);
 
-            router.push(
-              "https://upskirtcandy.com/"
-            );
+            window.location.assign(redirect);
           } catch (err: any) {
             console.error(err);
 
@@ -615,15 +605,10 @@ export default function UploadPage() {
           <p className="flex gap-2 text-sm text-white/70 mt-2 px-1">
             Users who are verified get more views and interaction.
 
-            <Link href="https://upskirtcandy.com/verify">
-              <button
-                className="underline underline-offset-4 font-medium"
-                style={{ color: ACCENT }}
-                type="button"
-              >
-                Get verified.
-              </button>
-            </Link>
+            <a href="https://goongram.com/verify"
+              className="font-medium underline underline-offset-4" style={{ color: ACCENT }}>
+              Get verified.
+            </a>
           </p>
         </Card>
 

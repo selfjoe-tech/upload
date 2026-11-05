@@ -58,6 +58,20 @@ function makeStoragePath(kind: "video" | "image", ownerId: string, file: File) {
 
 
 
+async function getAuthenticatedOwnerId(): Promise<string> {
+  // Check both the server session and the browser session. Never infer
+  // ownership from a legacy cookie or user-provided ID.
+  const ownerId = await requireUserIdFromCookies();
+  if (!ownerId) {
+    throw new Error("Your Goon Gram session is unavailable on the upload site. Sign out and sign back in at goongram.com, then try again.");
+  }
+  const { data, error } = await supabase.auth.getUser();
+  if (error || data.user?.id !== ownerId) {
+    throw new Error("Your upload session could not be verified. Please sign in again at goongram.com.");
+  }
+  return ownerId;
+}
+
 async function uploadToStorage(path: string, file: File): Promise<void> {
   const { error } = await supabase.storage.from("media").upload(path, file, {
     cacheControl: "3600",
@@ -118,7 +132,7 @@ export async function uploadTrimmedVideo(
   // We’ll do a simple 0 -> 100 callback so your UI doesn't break.
   opts?.onUploadProgress?.(0);
 
-  const ownerId = await requireUserIdFromCookies();
+  const ownerId = await getAuthenticatedOwnerId();
   const storagePath = makeStoragePath("video", ownerId, clip.file);
 
   // Upload bytes
@@ -154,7 +168,7 @@ export async function uploadSingleImage(
 ): Promise<InsertedMediaRow> {
   opts?.onUploadProgress?.(0);
 
-  const ownerId = await requireUserIdFromCookies();
+  const ownerId = await getAuthenticatedOwnerId();
   const storagePath = makeStoragePath("image", ownerId, file);
 
   await uploadToStorage(storagePath, file);
@@ -185,7 +199,7 @@ export async function uploadImagesBatch(
   const failures: { index: number; error: string }[] = [];
 
   // Reuse the same user id for the whole batch
-  const ownerId = await requireUserIdFromCookies();
+  const ownerId = await getAuthenticatedOwnerId();
 
   for (let i = 0; i < files.length; i++) {
     try {

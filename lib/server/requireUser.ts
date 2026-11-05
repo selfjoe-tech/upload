@@ -1,27 +1,22 @@
 "use server";
 
-import { cookies } from "next/headers";
-import { supabasePublic as supabase } from "@/lib/supabase/public";
+import { createClient } from "@/lib/supabase/server";
 
-export async function requireUserIdFromCookies(): Promise<string> {
-  const store = await cookies();
-
-  const userId = store.get("userId")?.value ?? null;
-  const isLoggedIn = store.get("isLoggedIn")?.value === "true";
-
-  if (!userId || !isLoggedIn) {
-    throw new Error("Unauthorized");
+/**
+ * Return null for expired/missing sessions so the client can render a useful
+ * error instead of Next.js hiding a thrown server action exception in production.
+ */
+export async function requireUserIdFromCookies(): Promise<string | null> {
+  try {
+    const supabase = await createClient();
+    const { data, error } = await supabase.auth.getUser();
+    if (error) {
+      console.warn("[upload] Supabase session validation failed:", error.message);
+      return null;
+    }
+    return data.user?.id ?? null;
+  } catch (error) {
+    console.error("[upload] Unable to validate Supabase session", error);
+    return null;
   }
-
-  // Optional sanity check: confirm profile exists
-  const { data, error } = await supabase
-    .from("profiles")
-    .select("id")
-    .eq("id", userId)
-    .maybeSingle();
-
-  if (error || !data) throw new Error("Unauthorized");
-
-  return userId;
 }
-
